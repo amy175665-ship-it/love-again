@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#cfe3ff">
+<title>CONTINUE? — 쭌과 와와의 세이브 파일</title>
+<link rel="preload" href="assets/fonts/galmuri11-regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/scenes.css">
+<script defer src="js/data/story.js"></script>
+<script defer src="js/core/sprites.js"></script>
+<script defer src="js/core/engine.js"></script>
+<script defer src="js/scenes/story.js"></script>
+<script defer src="js/main.js"></script>
+</head>
+<body>
+<div id="shell" class="boot">
+  <header id="hud">
+    <div id="chapter"></div>
+    <div id="pips" aria-hidden="true"></div>
+    <button id="sound" class="tap" aria-pressed="true" aria-label="소리 켜기/끄기">
+      <svg class="on" viewBox="0 0 11 11" shape-rendering="crispEdges"><path fill="#2b2d5c" d="M0 4h2V3h1V2h1V1h1v9H4V9H3V8H2V7H0zM7 3h1v5H7zM9 1h1v9H9z"/></svg>
+      <svg class="off" viewBox="0 0 11 11" shape-rendering="crispEdges"><path fill="#7a7fa8" d="M0 4h2V3h1V2h1V1h1v9H4V9H3V8H2V7H0zM7 3h1v1h1V3h1v1H9v1h1v1H9v1h1v1H9V7H8v1H7V7h1V6H7V5h1V4H7z"/></svg>
+    </button>
+  </header>
+  <main id="stage" aria-live="polite"></main>
+  <section id="dialog" hidden>
+    <div id="speaker"></div>
+    <div id="line"></div>
+    <div id="choices"></div>
+    <div id="next" hidden></div>
+  </section>
+  <div id="toast" role="status"></div>
+  <div id="modal" hidden><div class="panel"><p id="mtext"></p><div class="row" id="mrow"></div></div></div>
+  <div id="iris"><div class="hole"></div></div>
+</div>
+
+
+</body>
+</html>
