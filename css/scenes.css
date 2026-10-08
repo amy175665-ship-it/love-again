@@ -94,17 +94,79 @@
   background-position:10px 20px, 50px 60px, 0 0;
 }
 .map svg.road{ position:absolute; inset:0; width:100%; height:100%; }
-.node{
-  position:absolute; transform:translate(-50%,-50%); border:0; background:none; padding:6px;
-  display:flex; flex-direction:column; align-items:center; gap:7px; min-width:88px; z-index:3;
+/* 함께 있던 맵: 바다 위에 뜬 작은 섬 (모바일 월드맵의 섬·구불길·장소 타일 구성) */
+.daymap{
+  background:
+    radial-gradient(ellipse 10px 3px, rgba(255,255,255,.85) 70%, transparent 76%) 0 0 / 76px 44px,
+    radial-gradient(ellipse 7px 2px, rgba(255,255,255,.6) 70%, transparent 76%) 38px 22px / 76px 44px,
+    linear-gradient(#bdeef2, var(--sea) 40%, #8fd2dc);
 }
-.node .ico{ width:62px; padding:9px; }
-.node .lb{ font-size:13px; background:var(--paper); border:2px solid var(--ink); border-radius:99px; padding:2px 9px; white-space:nowrap; }
-.node.pulse .ico{ animation:hop 1s steps(2) infinite; }
-@keyframes hop{ 50%{ transform:translateY(-4px); background:#fffbea; } }
-.node.done .ico{ background:var(--soft); }
-.node.done::after{ content:"CLEAR"; position:absolute; top:-6px; right:-8px; background:var(--mint); border:2px solid var(--ink); border-radius:99px; font-size:10px; padding:1px 6px; }
+.isle{
+  position:absolute; left:4%; right:4%; top:10%; bottom:7%;
+  border:3px solid var(--ink); border-radius:38% 46% 42% 40% / 22% 26% 30% 28%;
+  background:
+    radial-gradient(circle, rgba(255,255,255,.7) 1.5px, transparent 2px) 6px 9px / 38px 38px,
+    repeating-conic-gradient(#c4eaab 0 25%, #b9e4a0 0 50%) 0 0 / 30px 30px;
+  box-shadow:
+    inset 0 5px 0 rgba(255,255,255,.45), inset 0 -9px 0 #a6dc8f,
+    0 12px 0 #c48a5a, 0 12px 0 3px var(--ink), 0 24px 0 3px rgba(43,45,92,.16);
+}
+.daymap .road path{ fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.daymap .road-edge{ stroke:var(--ink); stroke-width:21px; }
+.daymap .road-dirt{ stroke:var(--sand); stroke-width:15px; }
+.daymap .road-stone{ stroke:#e6c98a; stroke-width:6px; stroke-dasharray:0 15; }
+.map-deco{ position:absolute; inset:0; pointer-events:none; }
+.map-deco > span{ position:absolute; transform:translate(-50%,-100%); }
+.map-deco .tree{ width:46px; }
+.map-deco .bush{ width:34px; }
+.map-deco .flower{ width:20px; }
+.map-deco .pond{
+  width:72px; height:32px; transform:translate(-50%,-50%); background:var(--sea);
+  border:3px solid var(--ink); border-radius:50%; box-shadow:inset 0 -6px 0 rgba(255,255,255,.55), 0 3px 0 #a6dc8f;
+}
+.map-deco .cloud{ width:70px; opacity:.92; z-index:2; animation:drift 6s steps(6) infinite alternate; }
+.map-deco .cloud.slow{ animation-duration:9s; }
+@keyframes drift{ to{ translate:14px 0; } }
+
+/* 장소 타일: 돌 받침 위의 아이콘 + 이름판, 갈 수 있는 곳은 ! 핀 */
+.node{
+  position:absolute; transform:translate(-50%,-50%); border:0; background:none; padding:4px 4px 2px;
+  display:flex; flex-direction:column; align-items:center; min-width:96px; z-index:3; color:var(--ink);
+}
+.node .ico{ position:relative; z-index:1; width:64px; padding:10px; border-radius:18px;
+  box-shadow:0 5px 0 var(--ink), inset 0 -6px 0 rgba(43,45,92,.12), inset 0 4px 0 rgba(255,255,255,.7); }
+.spot-pc .ico{ background:var(--lilac); }
+.spot-food .ico{ background:#ffe2c4; }
+.spot-game .ico{ background:var(--sky); }
+.node .pad{ width:86px; height:24px; margin-top:-12px; border:3px solid var(--ink); border-radius:50%; background:#efe3c2; box-shadow:inset 0 -5px 0 #d8c69c; }
+.node .lb{
+  margin-top:4px; padding:3px 10px; font-family:"Jua",sans-serif; font-size:14px; white-space:nowrap;
+  background:var(--paper); border:3px solid var(--ink); border-radius:10px; box-shadow:0 3px 0 var(--ink);
+}
+.node .pin{
+  position:relative; z-index:2; width:26px; height:26px; margin-bottom:5px; border:3px solid var(--ink); border-radius:50%;
+  background:var(--amber); font-family:"Jua",sans-serif; font-size:15px; line-height:20px; box-shadow:0 3px 0 var(--ink);
+}
+.node.pulse .pin{ animation:hop 1s steps(2) infinite; }
+.node.pulse .ico{ outline:3px dashed var(--paper); outline-offset:5px; }
+.node.pulse:hover .ico, .node.pulse:focus-visible .ico{ background:#fffbea; }
+.node:focus-visible{ outline:3px dashed var(--ink); outline-offset:2px; border-radius:16px; }
+@keyframes hop{ 50%{ transform:translateY(-4px); } }
+.node.done .pin{ background:var(--mint); font-size:13px; }
+.node.done .ico{ filter:saturate(.75); }
 .node[disabled]{ pointer-events:none; }
+
+@media (max-height:560px){
+  .map-deco .extra{ display:none; }
+  .map-deco .tree{ width:36px; }
+  .map-deco .cloud{ width:54px; }
+  .map-deco .pond{ width:54px; height:24px; }
+  .daymap .char{ width:50px; }
+  .node .ico{ width:50px; padding:8px; border-radius:14px; }
+  .node .pad{ width:68px; height:18px; margin-top:-10px; }
+  .node .lb{ font-size:12px; padding:2px 8px; }
+  .node .pin{ width:22px; height:22px; font-size:13px; line-height:16px; margin-bottom:3px; }
+}
 
 /* 이벤트 공통 */
 .ev .hpbox{ position:absolute; left:12px; right:12px; top:12px; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
@@ -114,48 +176,221 @@
 .hp.low .bar i{ background:var(--ember); }
 
 /* PC방: 보랏빛 방 */
-.pcroom{ background:linear-gradient(#d9ceff 0 70%, #c3b4f5 70%); }
-.sign{
-  position:absolute; left:50%; top:18px; transform:translateX(-50%); padding:8px 16px;
-  font-family:"Jua",sans-serif; font-size:19px; color:var(--ink); background:var(--mint);
-  border:3px solid var(--ink); border-radius:12px; box-shadow:0 4px 0 var(--ink); white-space:nowrap;
+.pcroom{ background:repeating-conic-gradient(#c3b4f5 0 25%, #b8a7f0 0 50%) 0 0 / 36px 36px; }
+.pcroom::before{
+  content:""; position:absolute; left:0; right:0; top:0; height:64%;
+  background:repeating-linear-gradient(90deg, transparent 0 46px, rgba(43,45,92,.06) 46px 49px), linear-gradient(#e3daff, #d9ceff);
 }
-.desk{ position:absolute; bottom:18%; left:6%; right:6%; height:18px; background:#fff; border:3px solid var(--ink); border-radius:8px; box-shadow:0 4px 0 var(--ink); }
-.mon{ position:absolute; bottom:calc(18% + 18px); width:84px; }
+.pcroom::after{ content:""; position:absolute; left:0; right:0; top:64%; height:10px; background:#b3a2ee; border-block:3px solid var(--ink); }
+.sign{
+  position:absolute; left:50%; top:18px; transform:translateX(-50%); padding:8px 16px; z-index:2;
+  font-family:"Jua",sans-serif; font-size:19px; color:var(--ink); background:var(--mint);
+  border:3px solid var(--ink); border-radius:12px; box-shadow:0 4px 0 var(--ink), 0 0 0 6px rgba(143,224,192,.35); white-space:nowrap;
+}
+.pc-deco > *{ position:absolute; }
+.pc-lights{ left:50%; top:4px; transform:translateX(-50%); display:flex; gap:14px; z-index:1; }
+.pc-lights i{ width:8px; height:8px; background:var(--amber); border:2px solid var(--ink); animation:blink 1.2s steps(2) infinite; }
+.pc-lights i:nth-child(even){ background:var(--mint); animation-delay:.6s; }
+.poster{ top:26%; width:64px; padding:10px; z-index:1; background:var(--paper); border:3px solid var(--ink); border-radius:6px; box-shadow:0 4px 0 var(--ink); transform:rotate(-3deg); }
+.poster + .poster{ transform:rotate(3deg); background:var(--cream); }
+.pc-row{ left:4%; right:4%; bottom:calc(36% + 6px); display:flex; justify-content:space-between; z-index:1; opacity:.5; filter:saturate(.4); }
+.pc-row span{ width:42px; }
+.pc-row::after{ content:""; position:absolute; left:0; right:0; bottom:-6px; height:8px; background:#fff; border:2px solid var(--ink); border-radius:4px; }
+.desk{ position:absolute; bottom:30%; left:6%; right:6%; height:18px; z-index:3; background:#fff; border:3px solid var(--ink); border-radius:8px; }
+.desk-front{ bottom:calc(30% - 34px); left:9%; right:9%; height:40px; z-index:2; background:#b3a2ee; border:3px solid var(--ink); border-radius:0 0 8px 8px; box-shadow:0 4px 0 var(--ink); }
+.kbd{ bottom:calc(30% + 3px); width:56px; height:9px; transform:translateX(-50%); z-index:4; background:repeating-linear-gradient(90deg, #5a6288 0 5px, #3d4259 5px 7px); border:2px solid var(--ink); border-radius:3px; }
+.mouse{ bottom:calc(30% + 3px); width:10px; height:12px; z-index:4; background:#5a6288; border:2px solid var(--ink); border-radius:5px 5px 4px 4px; }
+.mon{ position:absolute; bottom:calc(30% + 18px); width:84px; z-index:3; }
 .mon .glow{ position:absolute; inset:-18px; background:radial-gradient(rgba(143,224,192,.6), transparent 65%); animation:blink 2.4s steps(2) infinite; }
+/* 화면 속 작은 농장 */
+.mon .scr{
+  position:absolute; left:12%; right:12%; top:14%; height:46%;
+  background:
+    radial-gradient(circle, #ffe08a 3px, transparent 3.5px) 78% 22% / 14px 14px no-repeat,
+    repeating-linear-gradient(90deg, #a8764f 0 6px, #79d3b2 6px 10px) 0 100% / 100% 42% no-repeat,
+    #a9e2e8;
+}
+@media (max-height:640px){ .poster{ display:none; } }
+@media (max-height:560px){ .pc-row{ display:none; } .pcroom .char{ width:52px; } }
 
 /* 맛집 골목: 노을빛 거리 */
-.street{ background:linear-gradient(#ffd9b8 0 58%, #ffeccc 58%); }
-.counter{ position:absolute; left:12px; right:12px; bottom:6%; display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.street{
+  --ground:52%; --shop-top:84px;
+  background:
+    linear-gradient(#ffb98f, #ffd9b8 40%, #ffe6c9 var(--ground), transparent var(--ground)),
+    repeating-conic-gradient(#f2c49b 0 25%, #eebb8c 0 50%) 0 0 / 30px 30px;
+}
+.street .hpbox{ z-index:6; }
+.food-deco > *{ position:absolute; }
+/* 가게 앞 전구 줄 */
+.food-lights{ left:0; right:0; top:52px; display:flex; justify-content:space-around; z-index:2; }
+.food-lights::before{ content:""; position:absolute; left:0; right:0; top:2px; height:2px; background:var(--ink); }
+.food-lights i{ position:relative; width:9px; height:11px; margin-top:3px; background:var(--amber); border:2px solid var(--ink); border-radius:2px 2px 6px 6px; animation:blink 1.6s steps(2) infinite; }
+.food-lights i:nth-child(3n+2){ background:var(--ember); animation-delay:.5s; }
+.food-lights i:nth-child(3n){ background:var(--mint); animation-delay:1s; }
+/* 가게 세 곳: 음식 순서대로 놓이고, 먹으면 불이 켜짐 */
+.stalls{ left:6px; right:6px; top:var(--shop-top); bottom:calc(100% - var(--ground)); display:flex; gap:6px; z-index:1; }
+.stall{ position:relative; flex:1; background:#fff1dc; border:3px solid var(--ink); border-bottom:0; border-radius:8px 8px 0 0; }
+.stall > *{ position:absolute; }
+.stall .st-awning{
+  left:-6px; right:-6px; top:-3px; height:22%; min-height:16px; border:3px solid var(--ink); border-radius:6px 6px 10px 10px;
+  background:repeating-linear-gradient(90deg, var(--amber) 0 14px, var(--paper) 14px 28px);
+}
+.stall .st-board{ left:50%; top:29%; width:42%; max-width:52px; padding:5px; transform:translateX(-50%); background:var(--paper); border:3px solid var(--ink); border-radius:6px; }
+.stall .st-win{ left:10%; bottom:0; width:44%; height:34%; border:3px solid var(--ink); border-bottom:0; border-radius:4px 4px 0 0; background:#c9b6a6; transition:background .4s; }
+.stall .st-door{ right:10%; bottom:0; width:26%; height:44%; border:3px solid var(--ink); border-bottom:0; border-radius:12px 12px 0 0; background:#a8764f; }
+.stall.on .st-win{ background:radial-gradient(circle at 50% 70%, #fffbea, var(--amber) 80%); }
+.stall.on .st-board{ box-shadow:0 0 0 5px rgba(255,201,74,.55); }
+/* 대창집: 노란 차양과 김 */
+.steam{ left:50%; bottom:100%; width:30px; height:26px; transform:translateX(-50%); }
+.steam i{ position:absolute; bottom:0; width:6px; height:12px; border-radius:6px; background:rgba(255,255,255,.85); animation:steam 1.8s linear infinite; }
+.steam i:nth-child(1){ left:2px; } .steam i:nth-child(2){ left:12px; animation-delay:.6s; } .steam i:nth-child(3){ left:22px; animation-delay:1.2s; }
+@keyframes steam{ 0%{ transform:translateY(0); opacity:0; } 30%{ opacity:1; } 100%{ transform:translateY(-16px); opacity:0; } }
+/* 횟집: 민트 차양과 수조 */
+.stall-hoe{ background:#eefaf6; }
+.stall-hoe .st-awning{ background:repeating-linear-gradient(90deg, var(--mint) 0 14px, var(--paper) 14px 28px); }
+.stall-hoe .st-win{ background:radial-gradient(circle, #fff 2px, transparent 2.5px) 30% 30% / 12px 14px, #7cc6d0; }
+.stall-hoe.on .st-win{ background:radial-gradient(circle, #fff 2px, transparent 2.5px) 30% 30% / 12px 14px, radial-gradient(circle at 50% 70%, #e9fbff, var(--sea) 80%); }
+/* 이자카야: 짙은 나무 벽, 문 위에 붉은 노렌 */
+.stall-izakaya{ background:#8a5a43; }
+.stall-izakaya .st-awning{ background:var(--ink); }
+.stall-izakaya .st-awning::after{ content:""; position:absolute; inset:3px 0 0; background:repeating-linear-gradient(90deg, transparent 0 10px, #5a6288 10px 12px); }
+.stall-izakaya .st-board{ background:#fff6e4; }
+.stall-izakaya .st-door{ background:#5b3a2c; z-index:0; }
+.stall-izakaya .st-door::after{
+  content:""; position:absolute; left:-6px; right:-6px; top:-3px; height:42%; border:2px solid var(--ink); border-radius:0 0 3px 3px;
+  background:repeating-linear-gradient(90deg, #d8483a 0 8px, var(--ink) 8px 10px);
+}
+.stall-izakaya .st-win{ background:#6b4a3c; }
+.curb{ left:0; right:0; top:var(--ground); height:8px; z-index:1; background:#d9a77c; border-block:3px solid var(--ink); }
+/* 포장마차 의자: 바닥이 넓은 화면에서만 */
+.stools{ left:0; right:0; top:calc(var(--ground) + 46px); z-index:1; display:flex; justify-content:space-between; padding:0 9%; }
+.stools i{ width:26px; height:20px; background:linear-gradient(var(--ember) 0 8px, transparent 8px), linear-gradient(90deg, transparent 4px, var(--ember) 4px 8px, transparent 8px 18px, var(--ember) 18px 22px, transparent 22px); border:0; position:relative; }
+.stools i::before{ content:""; position:absolute; left:-2px; right:-2px; top:-2px; height:10px; border:2px solid var(--ink); border-radius:5px; }
+.stools i:nth-child(2){ background:linear-gradient(var(--sea) 0 8px, transparent 8px), linear-gradient(90deg, transparent 4px, var(--sea) 4px 8px, transparent 8px 18px, var(--sea) 18px 22px, transparent 22px); }
+@media (max-height:700px){ .stools{ display:none; } }
+/* 먹은 음식이 두 사람 사이로 떠오름 */
+.yum{ position:absolute; left:50%; top:22%; width:44px; z-index:7; pointer-events:none; animation:yum 1.2s ease-out forwards; }
+@keyframes yum{ 0%{ transform:translate(-50%,20px) scale(.4); opacity:0; } 25%{ transform:translate(-50%,0) scale(1.15); opacity:1; } 70%{ opacity:1; } 100%{ transform:translate(-50%,-26px) scale(1); opacity:0; } }
+.char.munch .body{ animation:hop .25s steps(2) 2; }
+/* 낮은 화면: 이름표가 아이템과 겹치지 않도록 원래 높이 유지 (JS의 캐릭터 y와 같이 고침) */
+@media (max-height:640px){ .street{ --ground:44%; --shop-top:64px; } .steam{ display:none; } }
+@media (max-height:560px){ .street .char{ width:52px; } .stall .st-board{ padding:3px; max-width:40px; } }
+/* 포장마차 상: 아이템이 그 위에 놓임 */
+.counter{ position:absolute; left:12px; right:12px; bottom:6%; display:grid; grid-template-columns:repeat(3,1fr); gap:10px; z-index:6; }
+.counter::before{ content:""; position:absolute; left:-12px; right:-12px; bottom:-100px; height:calc(100px + 34px); z-index:-1; background:repeating-linear-gradient(#c98d5f 0 10px, #bf8456 10px 13px); border-top:3px solid var(--ink); box-shadow:0 -4px 0 #e2a979 inset; }
 .item{ padding:12px 8px 10px; min-height:118px; display:flex; flex-direction:column; align-items:center; gap:8px; font-size:14px; }
 .item .spr{ width:56px; }
 .item.used{ background:var(--soft); opacity:.6; box-shadow:0 1px 0 var(--ink); transform:translateY(3px); }
 
 /* 게임 룸: 리듬 */
-.rhythm{ background:linear-gradient(#e6ddff, #f6efff); }
-.lanes{ position:absolute; left:14px; right:14px; top:46px; bottom:14px; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.lane{ position:relative; overflow:hidden; padding:0; border-radius:20px; }
-.lane .hit{ position:absolute; left:10px; right:10px; bottom:16%; height:8px; border-radius:99px; background:var(--ink); opacity:.85; }
-.lane .who{ position:absolute; left:0; right:0; bottom:4%; text-align:center; font-size:13px; color:var(--muted); }
-.lane.flash{ background:#fff3c4; }
-.note{ position:absolute; left:18%; right:18%; height:18px; top:-20px; background:var(--amber); border:3px solid var(--ink); border-radius:99px; }
-.note.got{ background:var(--mint); }
-.judge{ position:absolute; left:50%; top:32%; transform:translateX(-50%); font-family:"Jua",sans-serif; font-size:28px; color:var(--amber); -webkit-text-stroke:2px var(--ink); paint-order:stroke fill; pointer-events:none; }
-.combo{ position:absolute; top:14px; left:0; right:0; text-align:center; font-size:14px; color:var(--ink); }
+/* 게임 룸: 리듬 (태고 북 게임 구도: 가로 레인, 왼쪽 판정 원, 축제 배경) */
+.rhythm{
+  display:flex; flex-direction:column; padding:44px 10px 0;
+  background:
+    linear-gradient(#ffc08f, #ffe2c2 70%, #ffd8b0);
+}
+/* 축제 등 줄 */
+.matsuri{ position:absolute; left:0; right:0; top:0; display:flex; justify-content:space-around; }
+.matsuri::before{ content:""; position:absolute; left:0; right:0; top:4px; height:2px; background:var(--ink); }
+.matsuri i{ position:relative; width:18px; height:24px; margin-top:4px; border:2px solid var(--ink); border-radius:9px; background:linear-gradient(transparent 30%, rgba(43,45,92,.25) 30% 36%, transparent 36% 64%, rgba(43,45,92,.25) 64% 70%, transparent 70%), #d8483a; }
+.matsuri i:nth-child(even){ background:linear-gradient(transparent 30%, rgba(43,45,92,.2) 30% 36%, transparent 36% 64%, rgba(43,45,92,.2) 64% 70%, transparent 70%), var(--paper); }
+.matsuri i::before{ content:""; position:absolute; left:3px; right:3px; top:-4px; height:3px; background:var(--ink); }
+/* 위: 게이지 + 콤보 */
+.taiko-top{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.soul{ flex:1; height:16px; border:3px solid var(--ink); border-radius:99px; overflow:hidden; background:repeating-linear-gradient(90deg, #5a6288 0 10px, #4b5277 10px 12px); }
+.soul i{ display:block; height:100%; width:0; background:linear-gradient(90deg, var(--ember), var(--amber)); transition:width .3s steps(4); }
+.combo{ font-family:"Jua",sans-serif; font-size:16px; color:var(--paper); background:var(--ink); border-radius:99px; padding:3px 12px; white-space:nowrap; }
+/* 레인: 왼쪽 선수판 + 어두운 트랙 */
+.lanes{ display:grid; gap:8px; }
+.lane{ position:relative; display:flex; height:96px; padding:0; overflow:hidden; border:3px solid var(--ink); border-radius:14px; background:#3b2440; box-shadow:0 4px 0 var(--ink); text-align:left; }
+.player{ position:relative; flex:0 0 76px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; border-right:3px solid var(--ink); background:#ff8a6a; }
+.lane-wawa .player{ background:#7fc8e6; }
+.player .face{ width:44px; }
+.player .who{ font-size:12px; color:var(--ink); background:var(--paper); border:2px solid var(--ink); border-radius:99px; padding:0 8px; }
+.track{
+  position:relative; flex:1; overflow:hidden;
+  background:linear-gradient(transparent 22%, rgba(255,255,255,.07) 22% 78%, transparent 78%), linear-gradient(90deg, #4a2a4e, #6b3349);
+}
+.lane.flash .track{ background-color:#7a3b52; box-shadow:inset 0 0 0 99px rgba(255,201,74,.18); }
+/* 판정 원 */
+.lane .hit{ position:absolute; left:14px; top:50%; width:52px; height:52px; margin-top:-26px; border-radius:50%; border:3px solid rgba(255,255,255,.75); box-shadow:inset 0 0 0 6px #3b2440, inset 0 0 0 9px rgba(255,255,255,.35); }
+.lane .hit::before{ content:""; position:absolute; inset:-22px; border-radius:50%; opacity:0; background:repeating-conic-gradient(var(--amber) 0 10deg, transparent 10deg 20deg); -webkit-mask:radial-gradient(circle, transparent 38%, #000 40%, #000 62%, transparent 64%); mask:radial-gradient(circle, transparent 38%, #000 40%, #000 62%, transparent 64%); }
+.lane .hit.bang::before{ animation:burst .35s ease-out; }
+@keyframes burst{ 0%{ opacity:1; transform:scale(.6) rotate(0); } 100%{ opacity:0; transform:scale(1.15) rotate(25deg); } }
+/* 노트: 쭌 레인은 빨강, 와와 레인은 파랑 */
+.note{ position:absolute; left:0; top:50%; width:40px; height:40px; margin-top:-20px; border-radius:50%; border:3px solid var(--ink); background:radial-gradient(circle at 35% 35%, #ff9a8a 0 4px, transparent 5px), #e8473a; box-shadow:0 0 0 3px var(--paper), 0 0 0 5px var(--ink); }
+.lane-wawa .note{ background:radial-gradient(circle at 35% 35%, #c9f1ff 0 4px, transparent 5px), #3fb3d9; }
+.note.got{ background:var(--amber); box-shadow:0 0 0 3px var(--paper), 0 0 0 5px var(--ink), 0 0 0 12px rgba(255,201,74,.5); }
+.judge{ position:absolute; left:50%; top:32%; z-index:4; transform:translateY(-50%); font-family:"Jua",sans-serif; font-size:24px; color:var(--amber); -webkit-text-stroke:2px var(--ink); paint-order:stroke fill; pointer-events:none; white-space:nowrap; }
+/* 아래: 북 치는 두 사람 (넓은 화면) */
+.taiko-floor{
+  flex:1; min-height:0; margin:10px -10px 0; overflow:hidden; display:flex; justify-content:space-around; align-items:flex-end; padding-bottom:max(14px, 9%);
+  background:repeating-linear-gradient(90deg, transparent 0 58px, rgba(43,45,92,.18) 58px 61px) 0 100% / 100% 34% no-repeat, linear-gradient(transparent 66%, var(--ink) 66% calc(66% + 3px), #d59a62 calc(66% + 3px));
+}
+.drummer{ position:relative; width:140px; display:flex; flex-direction:column; align-items:center; }
+.drummer .face{ width:84px; margin-bottom:-18px; }
+.big-drum{
+  position:relative; width:124px; height:78px; border:3px solid var(--ink); border-radius:12px 12px 18px 18px;
+  background:radial-gradient(circle, var(--ink) 0 3px, transparent 3.5px) 0 6px / 16px 100% repeat-x, linear-gradient(90deg, #8a4b2e, #c27a4a 50%, #8a4b2e);
+}
+.big-drum::before{ content:""; position:absolute; left:-5px; right:-5px; top:-14px; height:24px; border:3px solid var(--ink); border-radius:50%; background:radial-gradient(ellipse, #fff6e4 0 55%, #f0dcc4 56%); }
+.drummer.bang .big-drum{ animation:hop .2s steps(2); }
+.drummer.bang .face{ animation:hop .2s steps(2) reverse; }
+@media (max-height:640px){ .drummer .face{ width:44px; margin-bottom:-10px; } .big-drum{ width:70px; height:42px; } .big-drum::before{ top:-10px; height:18px; } .lane{ height:80px; } .player{ flex-basis:64px; } .player .face{ width:36px; } }
+@media (max-height:560px){ .rhythm{ padding-top:38px; } .lane{ height:72px; } .matsuri i{ height:20px; } }
 
 /* 게임 룸: 주사위 판 */
-.board{ position:absolute; left:12px; right:12px; top:16px; display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
-.sq{ position:relative; min-height:76px; padding:8px 7px; font-size:12px; line-height:1.45; word-break:keep-all; border-radius:14px; box-shadow:0 3px 0 var(--ink); }
+/* 나무 탁자 */
+.boardgame{ background:repeating-linear-gradient(90deg, #d9a06c 0 70px, #cf955f 70px 72px, #d49b66 72px 140px, #c98d58 140px 142px); }
+/* 초록 보드판과 점선 길(칸 가운데를 잇는 고리) */
+.board{
+  position:absolute; left:10px; right:10px; top:12px; display:grid; grid-template-columns:repeat(3,1fr); gap:14px 12px; padding:12px;
+  background:radial-gradient(rgba(255,255,255,.08) 1px, transparent 1.5px) 0 0 / 8px 8px, #5fae7e;
+  border:3px solid var(--ink); border-radius:18px; box-shadow:0 5px 0 var(--ink), inset 0 0 0 5px #4c9a6b;
+}
+.board::before{ content:""; position:absolute; inset:25% calc(16.7% - 4px); border:4px dashed rgba(255,246,228,.85); border-radius:16px; }
+.sq{ position:relative; min-height:76px; padding:16px 7px 8px; font-size:12px; line-height:1.45; word-break:keep-all; border-radius:12px; box-shadow:0 3px 0 var(--ink); overflow:hidden; }
+.sq::before{ content:""; position:absolute; left:0; right:0; top:0; height:9px; border-bottom:2px solid var(--ink); background:var(--ember); }
+.sq[data-i="1"]::before{ background:var(--amber); }
+.sq[data-i="2"]::before{ background:var(--mint); }
+.sq[data-i="3"]::before{ background:var(--sea); }
+.sq[data-i="4"]::before{ background:var(--stage); }
+.sq[data-i="5"]::before{ background:#f2b4a0; }
 .sq b{ display:block; font-weight:normal; font-size:14px; margin-bottom:2px; }
-.sq.here{ background:var(--amber); animation:hop .6s steps(2) 3; }
+.sq.here{ background:#fff3c4; outline:3px solid var(--amber); outline-offset:2px; animation:hop .6s steps(2) 3; }
+/* 말: 흰 받침 위 캐릭터 */
+.pawn{ position:absolute; z-index:4; width:26px; transform:translate(-50%,-100%); transition:left .24s ease-out, top .24s ease-out; pointer-events:none; }
+.pawn::after{ content:""; position:absolute; left:-3px; right:-3px; bottom:-5px; height:9px; z-index:-1; border:2px solid var(--ink); border-radius:50%; background:var(--paper); }
+.pawn.hop{ animation:pawn-hop .26s ease-out; }
+@keyframes pawn-hop{ 50%{ translate:0 -12px; } }
+/* 주사위 받침과 주사위 */
+.tray{ position:absolute; left:50%; bottom:calc(12% - 16px); width:150px; height:46px; transform:translateX(-50%); border:3px solid var(--ink); border-radius:50%; background:radial-gradient(ellipse, #4c9a6b 0 50%, #3f8a5d 70%); box-shadow:0 4px 0 var(--ink); }
 .dice{
   position:absolute; left:50%; bottom:12%; transform:translateX(-50%); width:86px; height:86px;
-  display:grid; grid-template:repeat(3,1fr)/repeat(3,1fr); padding:12px; border-radius:20px; box-shadow:0 6px 0 var(--ink);
+  display:grid; grid-template:repeat(3,1fr)/repeat(3,1fr); padding:12px; border-radius:20px; box-shadow:0 6px 0 var(--ink), inset -6px -6px 0 var(--soft);
 }
 .dice i{ width:13px; height:13px; border-radius:50%; background:var(--ink); place-self:center; visibility:hidden; }
-.dice.roll{ animation:shake .12s steps(2) infinite; }
-@keyframes shake{ 50%{ transform:translateX(-50%) rotate(10deg); } }
-.dice-cap{ position:absolute; left:0; right:0; bottom:calc(12% - 32px); text-align:center; font-size:13px; color:var(--ink); }
+.dice i:nth-child(5){ background:#d8483a; }
+.dice.roll{ animation:tumble .36s ease-in-out infinite; }
+@keyframes tumble{ 0%,100%{ transform:translateX(-50%) translateY(0) rotate(0); } 50%{ transform:translateX(-50%) translateY(-30px) rotate(180deg); } }
+.dice-cap{ position:absolute; left:0; right:0; bottom:calc(12% - 46px); text-align:center; font-size:13px; color:var(--ink); }
+@media (max-height:640px){
+  .board{ gap:10px; padding:8px; }
+  .sq{ min-height:64px; padding-top:13px; }
+  .sq::before{ height:6px; }
+  .dice{ width:66px; height:66px; padding:9px; border-radius:16px; }
+  .dice i{ width:10px; height:10px; }
+  .tray{ width:116px; height:36px; bottom:calc(12% - 12px); }
+  .dice-cap{ bottom:calc(12% - 36px); }
+}
+@media (max-width:380px){
+  .board{ left:6px; right:6px; gap:10px 8px; padding:8px; }
+  .sq{ padding:12px 5px 6px; font-size:11px; line-height:1.4; }
+  .sq b{ font-size:12px; letter-spacing:-.03em; white-space:nowrap; }
+  .pawn{ width:20px; }
+}
+@media (max-width:380px) and (max-height:640px){ .dice-cap{ display:none; } .dice{ bottom:6%; width:56px; height:56px; padding:8px; } .dice i{ width:9px; height:9px; } .tray{ bottom:calc(6% - 12px); width:104px; height:32px; } }
 
 /* 원거리 모드: 살짝 차갑고 흐린 하늘 */
 .split{ display:grid; grid-template-rows:1fr auto 1fr; }

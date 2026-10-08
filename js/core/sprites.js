@@ -34,6 +34,8 @@ const SPR = {
   camera: ['..kkkk......','kkkddkkkkkkk','kdddkkkkdxdk','kddkBBBBkddk','kddkBxBBkddk','kddkBBBBkddk','kdddkkkkdddk','kkkkkkkkkkkk'],
   sheep: ['..kk....kk..','.kxxk..kxxk.','.kxxxkkxxxk.','.kxxxxxxxxk.','.kttttttttk.','.ktettttetk.','.kptttttptk.','..kttttttk..','...kkkkkk...'],
   tent: ['.....kk.....','....kook....','...kooOOk...','..kookkOOk..','.koookdkOOOk','koookddkOOOk','kkkkkkkkkkkk','hhhhhhhhhhhh'],
+  cloud: ['.....kkkk.......','...kkxxxxk......','..kxxxxxxxkkk...','.kxxxxxxxxxxxk..','kxxxxxxxxxxxxxk.','kxxxxxxxxxxxxxxk','.kkkkkkkkkkkkkk.'],
+  bush: ['............','...kkk.kkk..','..khhhkhhhk.','.khHhhhhhHhk','khhhhhHhhhhk','khhHhhhhhhhk','.kkkkkkkkkk.'],
   tree: ['...kkkkkk...','..khhhhhhk..','.khhHhhhhhk.','khhhhhhHhhhk','khHhhhhhhhhk','.khhhhhhhhk.','..kkkmmkkk..','....kmmk....','....kmmk....','..kkkkkkkk..'],
   console: ['kkkkkkkkkkkk','kBBkSSSSkrrk','kBBkSxSSkrrk','kkBkSSSSkrkk','kBBkSSSSkrrk','kkkkkkkkkkkk'],
   beanie: ['.....kk.....','....kxxk....','...kkkkkk...','..kxxxxxxk..','.kxxxxxxxxk.','.kxxxxxxxxk.','kkkkkkkkkkkk','kwxwxwxwxwxk','kkkkkkkkkkkk'],

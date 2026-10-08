@@ -175,43 +175,128 @@ async function sParty() {
   D.box.removeAttribute('tabindex');
 }
 
-// 3. 함께 있던 맵
+// 3. 함께 있던 맵 — 바다 위 작은 섬. 두 캐릭터는 길(MAP_PATH)을 따라 장소로 걸어 들어가고,
+// 맵에 다시 돌아오면 stand(장소 라벨을 피한 풀밭)에 서 있습니다.
 const SPOTS = [
-  { id: 'pc',   name: '제로백 PC방', x: 26, y: 70, icon: 'monitor', run: evPC },
-  { id: 'food', name: '맛집 골목',   x: 72, y: 50, icon: 'burger',  run: evFood },
-  { id: 'game', name: '게임 룸',     x: 30, y: 24, icon: 'dice',    run: evGame },
+  { id: 'pc',   name: '제로백 PC방', x: 25, y: 64, stand: { x: 58, y: 80 }, icon: 'monitor', run: evPC },
+  { id: 'food', name: '맛집 골목',   x: 73, y: 42, stand: { x: 73, y: 76 }, icon: 'burger',  run: evFood },
+  { id: 'game', name: '게임 룸',     x: 30, y: 23, stand: { x: 54, y: 34 }, icon: 'dice',    run: evGame },
+];
+const ROAD_N = 400;
+// 길을 길이 기준으로 고르게 나눈 점. x, y는 맵 %(viewBox 0~100), sx, sy는 화면 px
+function roadPoints(L) {
+  const path = $('.road-dirt', L), len = path.getTotalLength(), box = L.getBoundingClientRect();
+  return Array.from({ length: ROAD_N + 1 }, (_, i) => {
+    const p = path.getPointAtLength(len * i / ROAD_N);
+    return { x: p.x, y: p.y, sx: p.x / 100 * box.width, sy: p.y / 100 * box.height };
+  });
+}
+// lo~hi 점 번호 안에서 화면 좌표(sx, sy)에 가장 가까운 길 점
+function nearestPoint(pts, sx, sy, lo = 0, hi = ROAD_N) {
+  let best = lo;
+  for (let i = lo; i <= hi; i++) if (Math.hypot(pts[i].sx - sx, pts[i].sy - sy) < Math.hypot(pts[best].sx - sx, pts[best].sy - sy)) best = i;
+  return best;
+}
+// i에서 dir 방향으로 화면 거리 px만큼 떨어진 점 번호 (길 끝에서 멈춤)
+function roadAhead(pts, i, dir, px) {
+  let k = i;
+  while (k + dir >= 0 && k + dir <= ROAD_N && Math.hypot(pts[k].sx - pts[i].sx, pts[k].sy - pts[i].sy) < px) k += dir;
+  return k;
+}
+function putOnRoad(el, pts, i) {
+  const lo = pts[Math.floor(i)], hi = pts[Math.ceil(i)], k = i - Math.floor(i);
+  el.style.left = lo.x + (hi.x - lo.x) * k + '%'; el.style.top = lo.y + (hi.y - lo.y) * k + '%';
+}
+// moves: [[캐릭터, 출발 점 번호, 도착 점 번호]]. 모두 같은 시간에 걷습니다.
+async function walkRoad(moves, pts) {
+  if (reduce) { moves.forEach(([el, , to]) => putOnRoad(el, pts, to)); await sleep(20); return; }
+  const span = (a, b) => { let d = 0; for (let i = Math.min(a, b); i < Math.max(a, b); i++) d += Math.hypot(pts[i + 1].sx - pts[i].sx, pts[i + 1].sy - pts[i].sy); return d; };
+  const ms = Math.min(2600, Math.max(700, Math.max(...moves.map(([, a, b]) => span(a, b))) / .22));
+  // 길 점을 4개 간격으로 키프레임 삼아 Web Animations로 이동하고, 좌우가 바뀌는 시점에 몸을 돌립니다.
+  const timers = [];
+  const runs = moves.map(([el, a, b]) => {
+    const s = b >= a ? 1 : -1, idx = [];
+    for (let i = a; s > 0 ? i < b : i > b; i += 4 * s) idx.push(i);
+    idx.push(b);
+    let facing = null;
+    idx.forEach((i, k) => {
+      if (k === idx.length - 1) return;
+      const dx = pts[idx[k + 1]].x - pts[i].x;
+      if (Math.abs(dx) < .01) return;
+      const left = dx < 0;
+      if (left !== facing) { facing = left; timers.push(setTimeout(() => el.classList.toggle('flip', left), k / (idx.length - 1) * ms)); }
+    });
+    el.classList.add('walk');
+    return el.animate(idx.map(i => ({ left: pts[i].x + '%', top: pts[i].y + '%' })), { duration: ms, easing: 'linear', fill: 'forwards' });
+  });
+  const steps = setInterval(sfx.step, 220);
+  await Promise.all(runs.map(r => r.finished));
+  clearInterval(steps); timers.forEach(clearTimeout);
+  moves.forEach(([el, , b], k) => { putOnRoad(el, pts, b); runs[k].cancel(); el.classList.remove('walk', 'flip'); });
+}
+const MAP_PATH = 'M58 89 C44 92 26 84 25 66 C24 52 70 60 73 42 C76 26 44 18 30 24';
+// 장소와 길을 피한 장식 [아이콘, x, y, 낮은 화면에서 숨김]
+const MAP_DECO = [
+  ['tree', 9, 47], ['tree', 93, 66], ['tree', 12, 93], ['tree', 88, 24, 1],
+  ['bush', 50, 49], ['bush', 6, 30, 1], ['bush', 95, 78, 1],
+  ['flower', 44, 52], ['flower', 25, 90, 1], ['flower', 88, 58, 1], ['flower', 52, 12, 1],
 ];
 async function sMap() {
   const done = new Set();
-  let pos = { x: 50, y: 91 };
+  let pos = { x: 57, y: 91 }, last = 0;   // last: 마지막으로 들른 장소의 길 점 번호(처음엔 길 시작)
   while (done.size < SPOTS.length) {
     const L = await scene(2, L => {
-      L.className = 'layer map';
+      L.className = 'layer map daymap';
       L.innerHTML = `
+        <div class="isle" aria-hidden="true"></div>
+        <svg class="road" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <path class="road-edge" d="${MAP_PATH}" vector-effect="non-scaling-stroke"/>
+          <path class="road-dirt" d="${MAP_PATH}" vector-effect="non-scaling-stroke"/>
+          <path class="road-stone" d="${MAP_PATH}" vector-effect="non-scaling-stroke"/>
+        </svg>
+        <div class="map-deco" aria-hidden="true">
+          <span class="pond" style="left:84%;top:87%"></span>
+          ${MAP_DECO.map(([icon, x, y, extra]) => `<span class="${icon}${extra ? ' extra' : ''}" style="left:${x}%;top:${y}%">${svg(icon)}</span>`).join('')}
+          <span class="cloud" style="left:13%;top:7%">${svg('cloud')}</span>
+          <span class="cloud slow" style="left:97%;top:44%">${svg('cloud')}</span>
+          <span class="cloud extra" style="left:44%;top:100%">${svg('cloud')}</span>
+        </div>
         <div class="map-party" role="group" aria-label="각자의 특성 카드 다시 보기">
           <button class="btn" data-traits="jjun" aria-haspopup="dialog">쭌 특성</button>
           <button class="btn" data-traits="wawa" aria-haspopup="dialog">와와 특성</button>
         </div>
-        <svg class="road" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M50 96 L26 70 L72 50 L30 24" fill="none" stroke="#ffffff" stroke-opacity=".95" stroke-dasharray="10 9" vector-effect="non-scaling-stroke" style="stroke-width:7px;stroke-linecap:round"/>
-        </svg>
         ${SPOTS.map(s => `
-          <button class="node ${done.has(s.id) ? 'done' : 'pulse'}" data-id="${s.id}" style="left:${s.x}%;top:${s.y}%" ${done.has(s.id) ? 'disabled' : ''}>
-            <span class="ico">${svg(s.icon)}</span><span class="lb">${s.name}</span>
+          <button class="node spot-${s.id} ${done.has(s.id) ? 'done' : 'pulse'}" data-id="${s.id}" style="left:${s.x}%;top:${s.y}%" ${done.has(s.id) ? 'disabled' : ''}>
+            <span class="pin" aria-hidden="true">${done.has(s.id) ? '★' : '!'}</span>
+            <span class="ico">${svg(s.icon)}</span><span class="pad" aria-hidden="true"></span>
+            <span class="lb">${s.name}</span>
           </button>`).join('')}`;
     });
-    const jj = makeChar('jjun', pos.x - 6, pos.y, L);
-    const ww = makeChar('wawa', pos.x + 6, pos.y, L);
+    const jj = makeChar('jjun', pos.x - 7, pos.y, L);
+    const ww = makeChar('wawa', pos.x + 7, pos.y, L);
     L.querySelectorAll('[data-traits]').forEach(b =>
       b.addEventListener('click', () => showTraits(b.dataset.traits, b)));
-  hint(done.size === 0 ? T.daily.intro : `남은 장소 ${SPOTS.length - done.size}곳. 장소를 탭하세요.`);
+    hint(done.size === 0 ? T.daily.intro : `남은 장소 ${SPOTS.length - done.size}곳. 장소를 탭하세요.`);
     const spot = await new Promise(r => L.querySelectorAll('.node:not([disabled])').forEach(n =>
       n.addEventListener('click', () => { sfx.select(); r(SPOTS.find(s => s.id === n.dataset.id)); })));
     L.querySelectorAll('.node').forEach(n => n.disabled = true);
     L.querySelectorAll('[data-traits]').forEach(b => b.disabled = true);
     hideDialog();
-    await Promise.all([walk(jj, spot.x - 6, spot.y + 9), walk(ww, spot.x + 6, spot.y + 9)]);
-    pos = { x: spot.x, y: spot.y + 9 };
+    // 대화창이 사라져 맵 크기가 바뀐 뒤에 잽니다: 서 있던 곳 → 가까운 길 → 길을 따라 장소 안으로.
+    // 쭌이 앞장서고 와와가 캐릭터 한 명 거리만큼 뒤따릅니다.
+    const pts = roadPoints(L), base = L.getBoundingClientRect();
+    const ico = $(`.node[data-id="${spot.id}"] .ico`, L).getBoundingClientRect();
+    const to = nearestPoint(pts, ico.left - base.left + ico.width / 2, ico.top - base.top + ico.height / 2);
+    // 길에 오르는 곳은 지난 장소와 목적지 사이 구간에서 고릅니다(멀리 돌아가지 않게).
+    let from = nearestPoint(pts, pos.x / 100 * base.width, pos.y / 100 * base.height, Math.min(last, to), Math.max(last, to));
+    const dir = to >= from ? 1 : -1, gap = jj.offsetWidth * .9;
+    let wwFrom = roadAhead(pts, from, -dir, gap);
+    // 길 끝이라 뒤에 설 자리가 없으면 쭌이 한 칸 앞에 섭니다.
+    if (Math.hypot(pts[wwFrom].sx - pts[from].sx, pts[wwFrom].sy - pts[from].sy) < gap * .8) from = roadAhead(pts, wwFrom, dir, gap);
+    const stepMs = el => Math.min(900, Math.max(350, Math.hypot(parseFloat(el.style.left) / 100 * base.width - pts[from].sx, parseFloat(el.style.top) / 100 * base.height - pts[from].sy) / .22));
+    await Promise.all([walk(jj, pts[from].x, pts[from].y, stepMs(jj)), walk(ww, pts[wwFrom].x, pts[wwFrom].y, stepMs(ww))]);
+    await walkRoad([[jj, from, to], [ww, wwFrom, roadAhead(pts, to, -dir, gap)]], pts);
+    pos = spot.stand; last = to;
     await spot.run();
     done.add(spot.id);
   }
@@ -224,12 +309,20 @@ async function evPC() {
   const L = await scene(2, L => {
     L.className = 'layer pcroom';
     L.innerHTML = `
+      <div class="pc-deco" aria-hidden="true">
+        <div class="pc-lights">${'<i></i>'.repeat(9)}</div>
+        <span class="poster" style="left:9%">${svg('console')}</span>
+        <span class="poster" style="right:9%">${svg('dice')}</span>
+        <div class="pc-row">${`<span>${svg('monitor')}</span>`.repeat(5)}</div>
+        <div class="desk-front"></div>
+        ${[28, 72].map(x => `<span class="kbd" style="left:${x}%"></span><span class="mouse" style="left:calc(${x}% + 40px)"></span>`).join('')}
+      </div>
       <div class="sign">제로백 PC방</div>
-      <div class="mon" style="left:calc(28% - 42px)"><div class="glow"></div>${svg('monitor')}</div>
-      <div class="mon" style="left:calc(72% - 42px)"><div class="glow"></div>${svg('monitor')}</div>
+      <div class="mon" style="left:calc(28% - 42px)"><div class="glow"></div>${svg('monitor')}<i class="scr"></i></div>
+      <div class="mon" style="left:calc(72% - 42px)"><div class="glow"></div>${svg('monitor')}<i class="scr"></i></div>
       <div class="desk"></div>`;
   }, '제로백 PC방');
-  const jj = makeChar('jjun', 28, 96, L), ww = makeChar('wawa', 72, 96, L);
+  const jj = makeChar('jjun', 28, 87, L), ww = makeChar('wawa', 72, 87, L);
   await withDialogInput(async () => {
     for (const [who, line] of T.daily.pc) await say(who, line);
   });
@@ -243,6 +336,18 @@ async function evFood() {
   const L = await scene(2, L => {
     L.className = 'layer street ev';
     L.innerHTML = `
+      <div class="food-deco" aria-hidden="true">
+        <div class="food-lights">${'<i></i>'.repeat(11)}</div>
+        <div class="stalls">${keys.map(k => `
+          <div class="stall stall-${k}" data-stall="${k}">
+            <span class="st-awning"></span>
+            <span class="st-board">${svg(k)}${k === 'daechang' ? '<span class="steam"><i></i><i></i><i></i></span>' : ''}</span>
+            <span class="st-win"></span><span class="st-door"></span>
+          </div>`).join('')}
+        </div>
+        <div class="curb"></div>
+        <div class="stools"><i></i><i></i><i></i></div>
+      </div>
       <div class="hpbox">
         <div class="hp low" id="hpj">쭌 HP<div class="bar"><i style="width:25%"></i></div></div>
         <div class="hp low" id="hpw">와와 HP<div class="bar"><i style="width:25%"></i></div></div>
@@ -251,7 +356,18 @@ async function evFood() {
         <button class="item" data-k="${k}"><span class="spr">${svg(k === 'gop' ? 'gop' : k)}</span>${T.food[k][0]}</button>`).join('')}
       </div>`;
   }, '맛집 골목');
-  const jj = makeChar('jjun', 36, 44, L), ww = makeChar('wawa', 64, 44, L);
+  // 바닥선(CSS --ground)과 같은 높이에 섭니다.
+  const ground = matchMedia('(max-height:640px)').matches ? 44 : 52;
+  const jj = makeChar('jjun', 36, ground, L), ww = makeChar('wawa', 64, ground, L);
+  // 먹은 음식이 두 사람 위로 떠오르고, 그 가게에 불이 켜집니다.
+  const eat = k => {
+    $(`.stall[data-stall="${k}"]`, L)?.classList.add('on');
+    const yum = document.createElement('span');
+    yum.className = 'yum'; yum.setAttribute('aria-hidden', 'true'); yum.innerHTML = svg(k);
+    L.appendChild(yum); setTimeout(() => yum.remove(), reduce ? 300 : 1300);
+    [jj, ww].forEach(c => { c.classList.remove('munch'); void c.offsetWidth; c.classList.add('munch'); });
+    setTimeout(() => [jj, ww].forEach(c => c.classList.remove('munch')), reduce ? 50 : 700);
+  };
   let hp = 25;
   const used = new Set();
   while (used.size < keys.length) {
@@ -260,7 +376,7 @@ async function evFood() {
       b.onclick = () => r(b.dataset.k)));
     L.querySelectorAll('.item').forEach(b => b.onclick = null);
     $(`.item[data-k="${k}"]`, L).classList.add('used'); used.add(k);
-    sfx.item(); hp += 25;
+    sfx.item(); eat(k); hp += 25;
     L.querySelectorAll('.hp').forEach(h => { $('i', h).style.width = hp + '%'; h.classList.toggle('low', hp < 50); });
     await say('sys', `${T.food[k][0]}을(를) 사용했습니다. ${T.food[k][1]}`);
   }
@@ -273,11 +389,21 @@ async function evFood() {
 async function evGame() {
   let L = await scene(2, L => {
     L.className = 'layer rhythm';
+    // 태고 북 게임처럼 가로 레인: 노트가 오른쪽에서 왼쪽 판정 원으로 흘러옵니다.
     L.innerHTML = `
-      <div class="combo" id="combo">COMBO 0</div>
-      <div class="lanes">
-        <button class="lane" data-l="0" aria-label="왼쪽 레인"><div class="hit"></div><div class="who">쭌</div></button>
-        <button class="lane" data-l="1" aria-label="오른쪽 레인"><div class="hit"></div><div class="who">와와</div></button>
+      <div class="matsuri" aria-hidden="true">${'<i></i>'.repeat(9)}</div>
+      <div class="taiko-top">
+        <div class="soul" aria-hidden="true"><i id="soul"></i></div>
+        <div class="combo" id="combo">COMBO 0</div>
+      </div>
+      <div class="lanes">${['jjun', 'wawa'].map((who, i) => `
+        <button class="lane lane-${who}" data-l="${i}" aria-label="${NAMES[who]} 레인">
+          <span class="player" aria-hidden="true"><span class="face">${svg(who)}</span><span class="who">${NAMES[who]}</span></span>
+          <span class="track"><span class="hit"></span></span>
+        </button>`).join('')}
+      </div>
+      <div class="taiko-floor" aria-hidden="true">${['jjun', 'wawa'].map(who => `
+        <div class="drummer drummer-${who}"><span class="face">${svg(who)}</span><span class="big-drum"></span></div>`).join('')}
       </div>
       <div class="judge" id="judge"></div>`;
   }, '게임 룸 — 리듬게임');
@@ -288,12 +414,31 @@ async function evGame() {
   await sys('결과: MAX COMBO 5년.');
 
   L = await scene(2, L => {
-    L.className = 'layer sky';
+    // 나무 탁자 위 보드판: 칸은 1→2→3, 아래 줄은 4→5→6이 오른쪽에서 왼쪽으로 이어지는 고리
+    L.className = 'layer boardgame';
     L.innerHTML = `
-      <div class="board">${T.dice.map(([a, b], i) => `<div class="sq" data-i="${i}"><b>${i + 1}. ${a}</b>${b}</div>`).join('')}</div>
+      <div class="board">${T.dice.map(([a, b], i) => `<div class="sq" data-i="${i}" style="grid-area:${i < 3 ? 1 : 2}/${i < 3 ? i + 1 : 6 - i}"><b>${i + 1}. ${a}</b>${b}</div>`).join('')}</div>
+      <div class="tray" aria-hidden="true"></div>
       <button class="dice" id="dice" aria-label="주사위 굴리기">${'<i></i>'.repeat(9)}</button>
-      <div class="dice-cap blink" id="cap">탭해서 굴리기</div>`;
+      <div class="dice-cap blink" id="cap">탭해서 굴리기</div>
+      ${['jjun', 'wawa'].map(who => `<span class="pawn" aria-hidden="true">${svg(who)}</span>`).join('')}`;
   }, '게임 룸 — 인생게임');
+  // 말 두 개: 처음엔 주사위 받침 양옆, 굴린 뒤 한 칸씩 이동합니다. 화면 크기가 바뀌면 다시 맞춥니다.
+  const pawns = [...L.querySelectorAll('.pawn')];
+  let spot = -1;
+  const placePawns = () => {
+    const base = L.getBoundingClientRect();
+    const r = spot < 0 ? $('.tray', L).getBoundingClientRect() : $(`.sq[data-i="${spot}"]`, L).getBoundingClientRect();
+    pawns.forEach((p, k) => {
+      // 칸 위에서는 오른쪽 위 색 띠에 올라서서 글자를 가리지 않습니다.
+      const w = p.offsetWidth;
+      const x = spot < 0 ? (k ? r.right + 22 : r.left - 22) : r.right - w * .6 - (1 - k) * w * .85;
+      const y = spot < 0 ? r.top + r.height * .8 : r.top + 6;
+      p.style.left = x - base.left + 'px'; p.style.top = y - base.top + 'px';
+    });
+  };
+  placePawns();
+  const fit = new ResizeObserver(placePawns); fit.observe(L);
   const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
   const dice = $('#dice', L);
   const show = n => [...dice.children].forEach((p, i) => p.style.visibility = PIPS[n].includes(i) ? 'visible' : 'hidden');
@@ -304,10 +449,18 @@ async function evGame() {
   for (let i = 0; i < 12; i++) { show(1 + Math.floor(Math.random() * 6)); sfx.blip(); await sleep(reduce ? 1 : 60); }
   const n = 1 + Math.floor(Math.random() * 6);
   dice.classList.remove('roll'); show(n); sfx.confirm();
+  await sleep(reduce ? 1 : 300);
+  for (spot = 0; spot < n; spot++) {
+    placePawns(); sfx.step();
+    pawns.forEach(p => { p.classList.remove('hop'); void p.offsetWidth; p.classList.add('hop'); });
+    await sleep(reduce ? 1 : 300);
+  }
+  spot = n - 1;
   $(`.sq[data-i="${n - 1}"]`, L).classList.add('here');
   const [a, b] = T.dice[n - 1];
   await sys(`${n}! ${a} 칸에 도착했습니다. ${b}.`);
   await sys('닌텐도, 리듬게임, 인생게임, 보드게임. 이 파일은 늘 2P 모드였습니다.');
+  fit.disconnect();
 }
 
 function rhythm(L) {
@@ -320,10 +473,14 @@ function rhythm(L) {
     chart.forEach((t, i) => {
       const lane = lanes[i % 3 === 2 ? 1 : i % 2];
       setTimeout(() => {
-        const n = document.createElement('div'); n.className = 'note';
-        lane.appendChild(n);
-        const hitY = lane.clientHeight * .84 - 9;
-        n.animate([{ transform: 'translateY(0)' }, { transform: `translateY(${hitY + 20}px)`, offset: .8 }, { transform: `translateY(${lane.clientHeight + 40}px)` }],
+        const track = $('.track', lane), ring = $('.hit', track);
+        const n = document.createElement('span'); n.className = 'note';
+        track.appendChild(n);
+        // 노트 왼쪽 끝 기준: 시작은 레인 오른쪽 밖, 0.8 지점에서 판정 원 한가운데
+        const half = n.offsetWidth / 2;
+        const hitX = ring.offsetLeft + ring.offsetWidth / 2 - half, fromX = track.clientWidth + 8;
+        n.animate([{ transform: `translateX(${fromX}px)` }, { transform: `translateX(${hitX}px)`, offset: .8 },
+          { transform: `translateX(${hitX - (fromX - hitX) / 4}px)` }],
           { duration: FALL * 1.25, easing: 'linear', fill: 'forwards' });
         notes.push({ el: n, lane, at: t0 + t + FALL, done: false });
       }, t + 400 - (reduce ? 0 : 0));
@@ -336,7 +493,13 @@ function rhythm(L) {
       n.done = true; n.el.classList.add('got'); setTimeout(() => n.el.remove(), 120);
       combo++; sfx.hit();
       $('#combo', L).textContent = 'COMBO ' + combo;
-      const j = $('#judge', L); j.textContent = Math.abs(n.at - now) < 90 ? 'PERFECT' : 'GOOD';
+      $('#soul', L).style.width = combo / chart.length * 100 + '%';
+      // 판정 원이 터지고, 아래 북 치는 캐릭터가 함께 튑니다.
+      const ring = $('.hit', lane), drummer = L.querySelectorAll('.drummer')[lanes.indexOf(lane)];
+      [ring, drummer].forEach(el => { el.classList.remove('bang'); void el.offsetWidth; el.classList.add('bang'); });
+      const j = $('#judge', L), r = ring.getBoundingClientRect(), base = L.getBoundingClientRect();
+      j.style.left = r.right - base.left + 8 + 'px'; j.style.top = r.top - base.top + r.height / 2 + 'px';
+      j.textContent = Math.abs(n.at - now) < 90 ? 'PERFECT' : 'GOOD';
       j.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 500, easing: 'steps(4)' });
     }));
     setTimeout(resolve, 400 + chart[chart.length - 1] + FALL + 700);
